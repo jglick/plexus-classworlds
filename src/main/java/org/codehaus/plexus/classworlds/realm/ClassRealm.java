@@ -62,6 +62,17 @@ public class ClassRealm
 
     private static final boolean isParallelCapable = Closeable.class.isAssignableFrom( URLClassLoader.class );
 
+    private static final class CallContext extends SecurityManager
+    {
+        private static final CallContext self = new CallContext();
+
+        public static String getCallerClassName()
+        {
+            // 0 = us, 1 = our caller, 2 = their caller
+            return self.getClassContext()[2].getName();
+        }
+    }
+
     /**
      * Creates a new class realm.
      *
@@ -276,9 +287,7 @@ public class ClassRealm
          * NOTE: If this gets called from ClassLoader.getResource(String), delegate to the strategy. If this got called
          * directly by other code, only scan our class path as usual for an URLClassLoader.
          */
-        StackTraceElement caller = new Exception().getStackTrace()[1];
-
-        if ( "java.lang.ClassLoader".equals( caller.getClassName() ) )
+        if ( "java.lang.ClassLoader".equals( CallContext.getCallerClassName() ) )
         {
             return strategy.getResource( name );
         }
@@ -295,9 +304,7 @@ public class ClassRealm
          * NOTE: If this gets called from ClassLoader.getResources(String), delegate to the strategy. If this got called
          * directly by other code, only scan our class path as usual for an URLClassLoader.
          */
-        StackTraceElement caller = new Exception().getStackTrace()[1];
-
-        if ( "java.lang.ClassLoader".equals( caller.getClassName() ) )
+        if ( "java.lang.ClassLoader".equals( CallContext.getCallerClassName() ) )
         {
             return strategy.getResources( name );
         }
