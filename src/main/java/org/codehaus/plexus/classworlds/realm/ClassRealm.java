@@ -62,6 +62,8 @@ public class ClassRealm
 
     private static final boolean isParallelCapable = Closeable.class.isAssignableFrom( URLClassLoader.class );
 
+    private final ThreadLocal<String> caller = new ThreadLocal<String>();
+
     /**
      * Creates a new class realm.
      *
@@ -270,21 +272,48 @@ public class ClassRealm
         throw new ClassNotFoundException( name );
     }
 
+    @Override
+    public URL getResource( String name )
+    {
+        caller.set( "getResource" );
+        try
+        {
+            return super.getResource( name );
+        }
+        finally
+        {
+            caller.remove();
+        }
+    }
+
     public URL findResource( String name )
     {
         /*
          * NOTE: If this gets called from ClassLoader.getResource(String), delegate to the strategy. If this got called
          * directly by other code, only scan our class path as usual for an URLClassLoader.
          */
-        StackTraceElement caller = new Exception().getStackTrace()[1];
-
-        if ( "java.lang.ClassLoader".equals( caller.getClassName() ) )
+        if ( "getResource".equals( caller.get() ) )
         {
             return strategy.getResource( name );
         }
         else
         {
             return super.findResource( name );
+        }
+    }
+
+    @Override
+    public Enumeration<URL> getResources( String name )
+        throws IOException
+    {
+        caller.set( "getResources" );
+        try
+        {
+            return super.getResources( name );
+        }
+        finally
+        {
+            caller.remove();
         }
     }
 
@@ -295,9 +324,7 @@ public class ClassRealm
          * NOTE: If this gets called from ClassLoader.getResources(String), delegate to the strategy. If this got called
          * directly by other code, only scan our class path as usual for an URLClassLoader.
          */
-        StackTraceElement caller = new Exception().getStackTrace()[1];
-
-        if ( "java.lang.ClassLoader".equals( caller.getClassName() ) )
+        if ( "getResources".equals( caller.get() ) )
         {
             return strategy.getResources( name );
         }
